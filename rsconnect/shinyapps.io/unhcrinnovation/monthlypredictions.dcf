@@ -1,0 +1,10 @@
+name: monthlypredictions
+title: MonthlyPredictions
+account: unhcrinnovation
+server: shinyapps.io
+appId: 212860
+bundleId: 975220
+url: https://unhcrinnovation.shinyapps.io/monthlypredictions/
+when: 1505056828.63182
+asMultiple: FALSE
+asStatic: FALSE

@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "# Rely on the 'WorldPhones' dataset in the datasets\n# package (which generally comes preloaded).\nlibrary(shiny)\nlibrary(datasets)\nlibrary(magrittr)\nlibrary(XML)\nlibrary(reshape)\nlibrary(gsheet)\n\njetson <- \"https://docs.google.com/spreadsheets/d/1oPTPmoJ9phtMOkp-nMB7WHnPESomLzqUj9t0gcE9bYA\"\nconflicts <- gsheet2text(jetson, sheetid = 819472314)\nconflicts.long <- read.csv(text=conflicts)\n\n\nodd_indexes<-seq(2,19,1)\nregions <- colnames(conflicts.long[odd_indexes])\nlist_regs <- rep(NA,18)\nfor (i in 1:18){\n  list_regs[i] <- strsplit(regions[i],  \"_(?=[^_]+$)\",perl=TRUE)[[1]][1]\n}\n\nshinyUI(\n  # Use a fluid Bootstrap layout\n  fluidPage(  \n    \n    tags$head(\n      tags$link(rel = \"stylesheet\", type = \"text/css\", href = \"style.css\"),\n      tags$script(src=\"main.js\")\n    ),\n    \n    # Give the page a title\n    titlePanel(\"Predictive Engine\"),\n    \n    # Generate a row with a sidebar\n    sidebarLayout(      \n      # Define the sidebar with one input\n      sidebarPanel(\n        \n        selectInput(\"region\", \"Region:\", \n                    choices=list_regs, selected = \"Bay\"),\n        sliderInput(\"months\", \"Months\", min = 1, max = nrow(conflicts.long)-1,\n                    value = 90, step = 10, round = 0),\n        hr(),\n        \n        sliderInput(\"futuremonths\", \"Months to Predict\", min = 3, max = 89,\n                    value = 3, step = 1, round = 0),\n        sliderInput(\"futureconflict\", \"Average number of Conflicts\", min = 1, max = 1000000,\n                    value = 10, step = 100, round = 0),\n        hr(),\n        helpText(\"According to the selected Region(BAY) the model is affected by the following parameters:\"),\n        sliderInput(\"var1\", \"r0\", min = 1, max = 1000000,\n                    value = 10, step = 100, round = 0),\n        helpText(\"Data from Innovation Jetson Google Sheet\"),\n        tableOutput(\"datatable\")\n      ),\n      \n      # Create a spot for the barplot\n      mainPanel(\n\n        checkboxGroupInput(\"Future_Indicators\", \"\",\n                           c(\"Arrivals\", \n                             \"Future Arrivals\", \n                             \"Future Departures\"),\n                           selected=c(\n                             \"Arrivals\", \n                             \"Future Arrivals\", \n                             \"Future Departures\"),\n                           inline=TRUE),\n        plotOutput(\"graph2\"),\n        checkboxGroupInput(\"Indicators\", \"\",\n                           c(\"Incidents\", \n                             \"Arrivals\", \n                             \"Departures\"),\n                           selected=c(\n                             \"Incidents\", \n                             \"Arrivals\", \n                             \"Departures\"),\n                           inline=TRUE),\n        \n        plotOutput(\"graph1\")\n        #plotOutput(\"IncidentPlot\"),\n        #plotOutput(\"ArrivalsPlot\"),\n        #plotOutput(\"DeparturesPlot\")\n      )\n      \n    )\n  )\n)\n",
+    "created" : 1504986286079.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "957300792",
+    "id" : "45F108C",
+    "lastKnownWriteTime" : 1505055457,
+    "last_content_update" : 1505055457958,
+    "path" : "~/UNHCR/App/MonthlyPredictions/ui.R",
+    "project_path" : "ui.R",
+    "properties" : {
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
