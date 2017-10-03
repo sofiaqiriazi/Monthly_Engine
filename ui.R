@@ -10,9 +10,9 @@ library(gsheet)
 jetson <- "https://docs.google.com/spreadsheets/d/1oPTPmoJ9phtMOkp-nMB7WHnPESomLzqUj9t0gcE9bYA"
 conflicts <- gsheet2text(jetson, sheetid = 819472314)
 conflicts.long <- read.csv(text=conflicts)
+
 Dates <- sapply(conflicts.long[,1],as.character.Date)
 conflicts.long$Date <- as.Date(conflicts.long$Date, format="%m/%d/%Y")
-
 
 odd_indexes<-seq(2,19,1)
 regions <- colnames(conflicts.long[odd_indexes])
@@ -39,17 +39,23 @@ shinyUI(
       sidebarPanel(
         
         selectInput("region", "Region:", 
-                    choices=list_regs, selected = "Bay"),
-        #max = nrow(conflicts.long)-1,
+                    choices=list_regs),
+        #sliderInput("months", "Months", min = 1, max = nrow(conflicts.long)-1,
+        #            value = 90, step = 10, round = 0),
+        #dateInput("date2","Select a Month to Predict the Arrivals in the Selected Region", 
+        #          value = NULL, min = NULL, max = NULL,format = "%b %Y", startview = "month", weekstart = NULL),
+        dateInput("date2","Select a Month to Predict the Arrivals in the Selected Region", value = NULL,
+                  format = "yyyy-mm-dd", startview = "month", weekstart = 0,
+                  language = "en", width = NULL),
         hr(),
-        
-        sliderInput("futureconflict", "Average number of Conflicts", min = 1, max = max(as.numeric(unlist(conflicts.long))),
+        helpText("According to the selected Region(BAY) the model is affected by the following parameters:"),
+        sliderInput("dep_var_1", "XXX", min = 1, max = 10000,
                     value = 10, step = 100, round = 0),
-        sliderInput("futureconflict", "Average number of Conflicts", min = 1, max = max(as.numeric(unlist(conflicts.long))),
+        sliderInput("dep_var_2", "XXX", min = 1, max = 10000,
                     value = 10, step = 100, round = 0),
-        hr(),
-        helpText("According to the selected Region the model is affected by the following parameters:"),
-        sliderInput("var1", textOutput("SliderText"), min = 1, max = 1999,
+        sliderInput("dep_var_3", "XXX", min = 1, max = 10000,
+                    value = 10, step = 100, round = 0),
+        sliderInput("var4", "XXX", min = 1, max = 10000,
                     value = 10, step = 100, round = 0),
         helpText("Data from Innovation Jetson Google Sheet"),
         tableOutput("datatable")
@@ -67,10 +73,10 @@ shinyUI(
                              "Future Arrivals", 
                              "Future Departures"),
                            inline=TRUE),
-        
         plotOutput("graph2"),
         sliderInput("futuremonths", "Months to Predict", max = as.Date(max(conflicts.long$Date)), min = (as.Date(max(conflicts.long$Date))-30*24),
                     value = c((as.Date(max(conflicts.long$Date))-30*24),as.Date(max(conflicts.long$Date))), timeFormat="%b %Y",width='100%'),
+
         checkboxGroupInput("Indicators", "",
                            c("Incidents", 
                              "Arrivals", 
@@ -84,7 +90,7 @@ shinyUI(
         plotOutput("graph1"),
         sliderInput("months", "Months", min = (as.Date(min(conflicts.long$Date))+30*3),max =as.Date(max(conflicts.long$Date)),
                     value=c((as.Date(min(conflicts.long$Date))+30*3),as.Date(max(conflicts.long$Date))),timeFormat="%b %Y",width='100%')
-      
+
         #plotOutput("IncidentPlot"),
         #plotOutput("ArrivalsPlot"),
         #plotOutput("DeparturesPlot")
