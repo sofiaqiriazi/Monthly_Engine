@@ -168,8 +168,30 @@ B_R <- max( SUM1, S, na.rm=TRUE)
 ###################################################################################################################
 A <- fatalities.long[t,"Banaadir_Fatalities"]
 B <- arrs.long[t,"Nugaal_Arrival"]
-C <- delay(Juba_River_discharge, 4)
-D <- max(0.766608274625863*Woqooyi_Galbeed_Conflict*Bakool_Arrival
-E <- 7.61315532207373e-5*Gedo_Arrival*Shabeellaha_Hoose_Arrival
+C <- rivers.long[(t-4),"Juba_River_discharge"]
+D <- 0.766608274625863*conflicts.long[t,"Woqooyi_Galbeed_Conflict"]*arrs.long[t,"Bakool_Arrival"]
+E <- 7.61315532207373e-5*arrs.long[t,"Gedo_Arrival"]*arrs.long[t,"Shabeellaha_Hoose_Arrival"]
 Fa <- -5491.48807365147
-Bay_Arrival = max( A + B + C + D + E + Fa, 0.346256266902831*Bay_Departures), Sool_Arrival) - 181.194263116577
+G <- 0.346256266902831*deps.long[t,"Bay_Departures"]
+S <- arrs.long[t,"Sool_Arrival"]
+H <- -181.194263116577
+SUM1 <- sum(D , E , Fa, na.rm=TRUE)
+MAX1 <- max(SUM1,G, na.rm=TRUE)
+SUM2 <- sum(A , B , C , MAX1, na.rm=TRUE)
+MAX2 <- max(SUM2, S, na.rm=TRUE)
+B_R <- sum(MAX2 , H, na.rm=TRUE)
+
+
+
+###################################################################################################################
+###################################################################################################################
+A <- 310
+B <- fatalities.long[t,"Shabeellaha_Dhexe_Fatalities"]
+C <- arrs.long[t,"Nugaal_Arrival"]
+D <- 0.767007545393261*conflicts.long[t,"Woqooyi_Galbeed_Conflict"]*arrs.long[t,"Bakool_Arrival"]
+E <- 7.61894156939422e-5*arrs.long[t,"Gedo_Arrival"]*arrs.long[t,"Shabeellaha_Hoose_Arrival"]
+Fa <- -5609.18124757954
+G <- 0.30889223926414*deps.long[t,"Bay_Departures"]
+SUM1 <- sum(D , E , Fa, na.rm=TRUE )
+MAX1 <- max(SUM1, G,na.rm=TRUE)
+B_R <- sum( A , B , C , MAX1, na.rm= TRUE) 

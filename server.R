@@ -894,6 +894,40 @@ B_R <- max( SUM1, S, na.rm=TRUE)
 }
 
 
+bay_11C_arrivals <- function(start,end){
+  
+  start = 15
+  
+  end=92
+  len=92
+  
+  PI <- PA <- PD <- rep(NA, len)
+  
+  for(t in start:end){
+    
+A <- 310
+B <- fatalities.long[t,"Shabeellaha_Dhexe_Fatalities"]
+C <- arrs.long[t,"Nugaal_Arrival"]
+D <- 0.767007545393261*conflicts.long[t,"Woqooyi_Galbeed_Conflict"]*arrs.long[t,"Bakool_Arrival"]
+E <- 7.61894156939422e-5*arrs.long[t,"Gedo_Arrival"]*arrs.long[t,"Shabeellaha_Hoose_Arrival"]
+Fa <- -5609.18124757954
+G <- 0.30889223926414*deps.long[t,"Bay_Departures"]
+SUM1 <- sum(D , E , Fa, na.rm=TRUE )
+MAX1 <- max(SUM1, G,na.rm=TRUE)
+B_R <- sum( A , B , C , MAX1, na.rm= TRUE)
+    
+    PA[t] <- B_R
+    
+    
+    #Bay_Incidents
+    PI[t] <- 0
+    #Bay_Departures
+    PD[t] <- 0
+    
+  }
+  return(PA)
+}
+
 bay_arrivals_all <- function(start,end){
   PI <- PA <- PD <- rep(NA, len)
   
@@ -1136,7 +1170,7 @@ shinyServer(function(input, output, session) {
     
     if(region == "Bay"){
         if(produce_slider(region)==TRUE){
-          PA <- bay_11B_arrivals(fmonths_start, fmonths_end)
+          PA <- bay_11C_arrivals(fmonths_start, fmonths_end)
           PI <- PA[fmonths_start:fmonths_end]  
         }  
     } 
