@@ -2,6 +2,11 @@
     visibility: hidden
 }
 
+#datatable{
+  font-size:16px;
+  background-color:#428bca;
+}
+
 .well {
     background: #0070BF;
     color: #fff;

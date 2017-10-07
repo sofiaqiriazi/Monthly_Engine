@@ -39,61 +39,12 @@ shinyUI(
       sidebarPanel(
         
         selectInput("region", "Region:", 
-                    choices=list_regs),
-        #sliderInput("months", "Months", min = 1, max = nrow(conflicts.long)-1,
-        #            value = 90, step = 10, round = 0),
-        #dateInput("date2","Select a Month to Predict the Arrivals in the Selected Region", 
-        #          value = NULL, min = NULL, max = NULL,format = "%b %Y", startview = "month", weekstart = NULL),
-        dateInput("date2","Select a Month to Predict the Arrivals in the Selected Region", value = NULL,
-                  format = "yyyy-mm-dd", startview = "month", weekstart = 0,
-                  language = "en", width = NULL),
-        hr(),
-        helpText("According to the selected Region(BAY) the model is affected by the following parameters:"),
-        sliderInput("dep_var_1", "XXX", min = 1, max = 10000,
-                    value = 10, step = 100, round = 0),
-        sliderInput("dep_var_2", "XXX", min = 1, max = 10000,
-                    value = 10, step = 100, round = 0),
-        sliderInput("dep_var_3", "XXX", min = 1, max = 10000,
-                    value = 10, step = 100, round = 0),
-        sliderInput("var4", "XXX", min = 1, max = 10000,
-                    value = 10, step = 100, round = 0),
-        helpText("Data from Innovation Jetson Google Sheet"),
-        tableOutput("datatable")
+                    choices=list_regs)
       ),
       
       # Create a spot for the barplot
       mainPanel(
-
-        checkboxGroupInput("Future_Indicators", "",
-                           c("Arrivals", 
-                             "Future Arrivals", 
-                             "Future Departures"),
-                           selected=c(
-                             "Arrivals", 
-                             "Future Arrivals", 
-                             "Future Departures"),
-                           inline=TRUE),
-        plotOutput("graph2"),
-        sliderInput("futuremonths", "Months to Predict", max = as.Date(max(conflicts.long$Date)), min = (as.Date(max(conflicts.long$Date))-30*24),
-                    value = c((as.Date(max(conflicts.long$Date))-30*24),as.Date(max(conflicts.long$Date))), timeFormat="%b %Y",width='100%'),
-
-        checkboxGroupInput("Indicators", "",
-                           c("Incidents", 
-                             "Arrivals", 
-                             "Departures"),
-                           selected=c(
-                             "Incidents", 
-                             "Arrivals", 
-                             "Departures"),
-                           inline=TRUE),
-        
-        plotOutput("graph1"),
-        sliderInput("months", "Months", min = (as.Date(min(conflicts.long$Date))+30*3),max =as.Date(max(conflicts.long$Date)),
-                    value=c((as.Date(min(conflicts.long$Date))+30*3),as.Date(max(conflicts.long$Date))),timeFormat="%b %Y",width='100%')
-
-        #plotOutput("IncidentPlot"),
-        #plotOutput("ArrivalsPlot"),
-        #plotOutput("DeparturesPlot")
+        tableOutput("datatable")
       )
       
     )

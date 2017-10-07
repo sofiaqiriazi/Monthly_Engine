@@ -1086,72 +1086,17 @@ bay_bestwaterfit_arrivals <- function(region, futuremonths){
 # the ids refer to the google sheet refering to the special identifier
 shinyServer(function(input, output, session) {
 
-
-  produce_slider <- function(x){
-    if(x =="Bay"){
-      exact_time <- as.character(input$date2) 
-      
-      value <- as.Date(exact_time, format = "%d/%m/%Y")
-      position <- which(arrs.long$Date == value)
-      updateSliderInput(session, "dep_var_1", "Arrivals in Jubbada Hoose", value = as.numeric(arrs.long[position,"Jubbada_Hoose_Arrival"]),
-                        min = 1, max = (max(as.numeric(unlist(arrs.long[,"Jubbada_Hoose_Arrival"])),na.rm=T)+5000) , step = 2)  
-      updateSliderInput(session, "dep_var_2", "Arrivals in Awdal", value =  as.numeric(arrs.long[position,"Awdal_Arrival"]),
-                        min = 1, max = (max(as.numeric(unlist(arrs.long[,"Awdal_Arrival"])),na.rm=T)+5000) , step = 2)  
-      updateSliderInput(session, "dep_var_3", "Arrivals in Togdheer", value =  as.numeric(arrs.long[position,"Togdheer_Arrival"]),
-                        min = 1, max = (max(as.numeric(unlist(arrs.long[,"Togdheer_Arrival"])),na.rm=T)+5000) , step = 2)  
-      updateSliderInput(session, "dep_var_4", "Arrivals in Bay", value =  as.numeric(arrs.long[position,"Bay_Arrival"]),
-                        min = 1, max = (max(as.numeric(unlist(arrs.long[,"Bay_Arrival"])),na.rm=T)+5000) , step = 2) 
-      
-    }
-    return(TRUE)
-  }
-  
-  
-  mydata <- reactive({
-    
-    # prepare columns for the merged graph
-    region <-input$region
-    time_start <- date_index(input$months[1])
-    time_end <- date_index(input$months[2])
-    
-
-    #testing values
-    #total_len <- nrow(conflicts.long)
-    #futuredays <- 30 
-    #region <- "Bay_Conflict"
-    reg_con <- paste(region,"Conflict",sep="_")
-    reg_arr <- paste(region,"Arrival",sep="_")
-    reg_dep <- paste(region,"Departures",sep="_")
-    reg_rain <- paste(region,"rain",sep="_")
-    I <- conflicts.long[ time_start:time_end,reg_con]
-    A <- arrs.long[ time_start:time_end, reg_arr ]
-    D <- deps.long[ time_start:time_end, reg_dep ]
-    extend <- time_end-time_start +1
-    
-    long <- data.frame(
-      Period=rep((1:extend),3),
-      Date = conflicts.long$Date[time_start:time_end],
-      Population = c(I, A, D), 
-      Indicator=rep(c("Incidents", 
-                      "Arrivals", 
-                      "Departures"), 
-                    each=(extend)))
-    wide <- cbind(I[time_start:time_end], 
-                  A[time_start:time_end], 
-                  D[time_start:time_end])
-    list(long=long, wide=wide)
-    
-    
-  })
   
   pred_data <- reactive({
     
     #testing
 
     region <- input$region
-    fmonths_start <- date_index(input$futuremonths[1])
-    fmonths_end <- date_index(input$futuremonths[2])
+    fmonths_start <- which(conflicts.long$Date == monthStart(as.Date("2011-07-01")))
+    fmonths_end <- which(conflicts.long$Date == monthStart(as.Date("2017-08-01")))
     # prepare columns for the merged graph
+    
+    
     
     reg_con <- paste(region,"Conflict",sep="_")
     reg_arr <- paste(region,"Arrival",sep="_")
@@ -1169,29 +1114,29 @@ shinyServer(function(input, output, session) {
     PI <- PA <- PD <- rep(NA, len)
     
     if(region == "Bay"){
-        if(produce_slider(region)==TRUE){
           PA <- bay_11C_arrivals(fmonths_start, fmonths_end)
-          PI <- PA[fmonths_start:fmonths_end]  
-        }  
-    } 
-        
-    else{
-      produce_slider(region)
+          PI <- PA[fmonths_start:fmonths_end]
     }
+    else{
+          PA <- rep(NA, len)
+          PI <- rep(NA, len)
+    }
+        
     A<- A[1:len]
-    Date = conflicts.long$Date[fmonths_start:fmonths_end]
+    Date <- conflicts.long$Date[fmonths_start:fmonths_end]
     long <- data.frame(
-      Period=rep((1:len),3), 
-      Date,
-      Population = c(A, PI, PD), 
+      Period=rep((1:len),2), 
+      Date=Date,
+      Population = c(A, PI), 
       Indicator=rep(c("Actual Arrivals", 
-                      "Historic Model Arrivals", 
-                      "Historic Model Departures"), 
+                      "Model Arrivals"), 
                     each=len))
     Actual_Arrivals <- A
     Model_Arrivals <- PI
-    
-    wide <- cbind(Date, Actual_Arrivals, Model_Arrivals)
+    Date <- Date
+    wide <- cbind(Date = format(Date,"%Y %b"),
+                  Actual_Arrivals = as.integer(Actual_Arrivals), 
+                  Model_Arrivals =as.integer(Model_Arrivals))
     list(long=long, wide=wide)
     
     
@@ -1201,35 +1146,9 @@ shinyServer(function(input, output, session) {
   output$datatable <- renderTable({
     Tdata <- cbind(pred_data()[["wide"]])
     Tdata <- cbind(Tdata)
-    #Tdata[seq(1, nrow(Tdata), length.out=nrow(Tdata)),]
+    Tdata[seq((nrow(Tdata)-3), nrow(Tdata), length.out=4),]
   })
   
-  
-  output$graph1 <- renderPlot({
-    
-    long <- mydata()[["long"]]
-    p <- ggplot(long[long$Indicator %in% input$Indicators,], 
-                aes(x=Date, y=Population, group=Indicator))    
-    p <- p + 
-      geom_line(aes(colour = Indicator), size=1, alpha=.75) + 
-      ggtitle("Arrivals, Departures, Incidents as Recorder")+
-      scale_x_date(name="Month", date_breaks = "6 month", date_minor_breaks = "1 month", date_labels = "%b %Y")+ 
-      scale_y_continuous(labels = comma)
-    print(p)
-  })
-  
-  output$graph2 <- renderPlot({
-    
-    long <- pred_data()[["long"]]
-    p <- ggplot(long[long$Indicator %in% input$Future_Indicators,], 
-                aes(x=Date, y=Population, group=Indicator))    
-    p <- p + 
-      geom_line(aes(colour = Indicator), size=1, alpha=.75) + 
-      ggtitle("Historic Predictions")+
-      scale_x_date(name="Month", date_breaks = "1 month", date_minor_breaks = "1 month", date_labels = "%b %Y")+ 
-      scale_y_continuous(labels = comma)
-    print(p)
-  })
   
   }
 
