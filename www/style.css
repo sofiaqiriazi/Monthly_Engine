@@ -4,11 +4,12 @@
 
 #datatable{
   font-size:16px;
-  background-color:#428bca;
+  background-color:#3f464b;
+  color:white;
 }
 
 .well {
-    background: #0070BF;
+    background: #3f464b;
     color: #fff;
     border: none
 }
@@ -37,18 +38,18 @@
 .irs-bar {
     height: 5px;
     top: 26px;
-    border-top: 1px solid #428bca;
-    border-bottom: 1px solid #428bca;
-    background: #428bca;
+    border-top: 1px solid #3f464b;
+    border-bottom: 1px solid #3f464b;
+    background: #3f464b;
 }
 
 .irs-bar-edge {
     height: 5px;
     top: 26px;
     width: 14px;
-    border: 1px solid #428bca;
+    border: 1px solid #3f464b;
     border-right: 0;
-    background: #428bca;
+    background: #3f464b;
     border-radius: 16px 0 0 16px;
     -moz-border-radius: 16px 0 0 16px;
 }
@@ -109,7 +110,7 @@
     line-height: 1.333;
     text-shadow: none;
     padding: 1px 3px;
-    background: #428bca;
+    background: #3f464b;
     border-radius: 3px;
     -moz-border-radius: 3px;
 }
