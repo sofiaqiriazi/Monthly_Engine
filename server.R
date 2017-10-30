@@ -7,6 +7,8 @@ library(gsheet)
 library(ggplot2)
 library(scales)
 library(zoo)
+library(pracma)
+library(psych)
 
 # Use the google spreadsheet
 jetson <- "https://docs.google.com/spreadsheets/d/1oPTPmoJ9phtMOkp-nMB7WHnPESomLzqUj9t0gcE9bYA"
@@ -42,7 +44,10 @@ fatalities <-gsheet2text(jetson, sheetid =343810263)
 fatalities.long <- read.csv(text=fatalities,stringsAsFactors = FALSE)
 
 discharge <- gsheet2text(jetson, sheetid=407366559)
-discharge <- read.csv(text=discharge,stringsAsFactors = FALSE)
+discharge.long <- read.csv(text=discharge,stringsAsFactors = FALSE)
+
+stations <- gsheet2text(jetson, sheetid=1052168743)
+stations.long <- read.csv(text=stations,stringsAsFactors = FALSE)
 
 Dates <- sapply(conflicts.long[,1],as.character.Date)
 conflicts.long$Date <- as.Date(conflicts.long$Date, format="%m/%d/%Y")
@@ -53,6 +58,7 @@ water.long$Date <-as.Date(water.long$Date, format="%m/%d/%Y")
 rivers.long$Date <-as.Date(rivers.long$Date, format="%m/%d/%Y")
 goats.long$Date <-as.Date(goats.long$Date, format="%m/%d/%Y")
 fatalities.long$Date <-as.Date(fatalities.long$Date, format="%m/%d/%Y")
+stations.long$Date <-as.Date(stations.long$Date, format="%m/%d/%Y")
 
 # Force columns to be text
 conflicts.long[,2:ncol(conflicts.long)] <- sapply(conflicts.long[,2:ncol(conflicts.long)], as.numeric)
@@ -63,6 +69,7 @@ water.long[,2:ncol(water.long)] <- sapply(water.long[,2:ncol(water.long)], as.nu
 rivers.long[,2:ncol(rivers.long)] <- sapply(rivers.long[,2:ncol(rivers.long)], as.numeric)
 goats.long[,2:ncol(goats.long)] <- sapply(goats.long[,2:ncol(goats.long)], as.numeric)
 fatalities.long[,2:ncol(fatalities.long)] <- sapply(fatalities.long[,2:ncol(fatalities.long)], as.numeric)
+stations.long[,2:ncol(stations.long)] <- sapply(stations.long[,2:ncol(stations.long)], as.numeric)
 
 # hc<-seq(as.Date(max(conflicts.long[,"Date"])), as.Date("2019-01-6"), by="months")
 # ha<-seq(as.Date(max(arrs.long[,"Date"])), as.Date("2019-01-6"), by="months")
@@ -100,45 +107,25 @@ bay_6A_arrivals <- function(start, end){
   PI <- PA <- PD <- rep(NA, len)
   
   for (t in start:end){
-    #Bay_Arrival = Shabeellaha_Dhexe_rain +
-    SD_R <- rain.long[t,"Shabeellaha_Dhexe_rain"]
-
-    #delay(Woqooyi_Galbeed_Arrival, 1) + 
-    WG_A <- arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
-    #wma(Togdheer_Arrival, 6) + 
-    T_A <- weighted.mean(arrs.long[ (t-6):t, "Togdheer_Arrival"])
-    #max(
-    #2.84291053988138*Bakool_Arrival + 
-    Bak_A <- 2.84291053988138*arrs.long[t,"Bakool_Arrival"]
-    #1.90605269499887*Bari_Arrival +
-    Bari_A <-  1.90605269499887* arrs.long[t,"Bari_Arrival"]
-    #0.582938861571093*Bay_Departures + 
-    Bay_D <- 0.582938861571093*deps.long[t,"Bay_Departures"]
-    #delay(Woqooyi_Galbeed_Arrival, 1) -
-    WG_A2 <- arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
-    #Shabeellaha_Dhexe_rain*sma(Jubbada_Hoose_Departures, 2) +
-    SH_R_JH_D <- -1*rain.long[t,"Shabeellaha_Dhexe_rain"]*mean(deps.long[(t-2):t,"Jubbada_Hoose_Departures"])
-    #- 0.0801078676959042*Hiiraan_WaterDrumPrice +
-    H_WDP <- -0.0801078676959042*as.numeric(water.long[t, "Hiiraan_WaterDrumPrice"])
-    #- 6.62472178142272*Awdal_Departures, 
-    A_D <- -6.62472178142272*deps.long[t,"Awdal_Departures"]
-    #0.263886473589876*Bay_Departures)
-    Bay_D2 <- 0.263886473589876*deps.long[t,"Bay_Departures"]
-
-#Bay_Arrival = Shabeellaha_Dhexe_rain + delay(Woqooyi_Galbeed_Arrival, 1) + wma(Togdheer_Arrival, 6) 
-#+ max(2.84291053988138*Bakool_Arrival + 1.90605269499887*Bari_Arrival + 0.582938861571093*Bay_Departures 
-#+ delay(Woqooyi_Galbeed_Arrival, 1) - (Shabeellaha_Dhexe_rain*sma(Jubbada_Hoose_Departures, 2) )
-#- 0.0801078676959042*Hiiraan_WaterDrumPrice - 6.62472178142272*Awdal_Departures, 0.263886473589876*Bay_Departures)
-
-
-    #breaking the function to section max
-    PA[t] <- 0
+    A <- rain.long[t,"Shabeellaha_Dhexe_rain"] 
+    B <- arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"] 
+    C <- mean(arrs.long[(t-6):t,"Togdheer_Arrival"])
     
-    section_max <- max(sum(Bak_A,Bari_A,Bay_D,WG_A2,SH_R_JH_D,H_WDP,A_D,na.rm=TRUE),Bay_D2)
-
-    section_add <- sum(SD_R, WG_A, T_A, section_max, na.rm=TRUE)
+    E <- 2.84291053988138*arrs.long[t,"Bakool_Arrival"]
+    Fa <- 1.90605269499887*arrs.long[t,"Bari_Arrival"]
+    G <- 0.582938861571093*deps.long[t,"Bay_Departures"]
+    H <- arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
+    I <- -1*rain.long[t,"Shabeellaha_Dhexe_rain"]*mean(deps.long[(t-2):t,"Jubbada_Hoose_Departures"])
+    J <- -0.0801078676959042*water.long[t,"Hiiraan_WaterDrumPrice"]
+    K <- -6.62472178142272*deps.long[t,"Awdal_Departures"]
+    L <- 0.263886473589876*deps.long[t,"Bay_Departures"]
     
-    PA[t] <- section_add
+    
+    
+    D <- max(sum(E,Fa,G ,H,I,J,K, na.rm=TRUE), L)
+    
+    fin <- sum(A,B,C,D, na.rm=TRUE)    
+    PA[t] <- fin
 
     
     #Bay_Incidents
@@ -928,159 +915,618 @@ B_R <- sum( A , B , C , MAX1, na.rm= TRUE)
   return(PA)
 }
 
-bay_arrivals_all <- function(start,end){
+bay_12A_arrivals <- function(start,end){
+  
+  start = 15
+  
+  end=93
+  len=93
+  
   PI <- PA <- PD <- rep(NA, len)
   
-    for (t in start:end){
+  for(t in start:end){
     
-    #BAY PREDICTION FOR JULY
-      #Bay_Arrival = Awdal_Arrival +
-      A_A <- arrs.long[ (t),"Awdal_Arrival"] 
-      #0.0203037108512618*Banadir_Arrival + 
-      Ban_A_reg <- 0.0203037108512618
-      Ban_A <- arrs.long[ (t), "Banadir_Arrival"]
+A <- deps.long[(t-13),"Galgaduud_Departures"]
+B <- 2.26751515362942*deps.long[(t-12),"Bari_Departures"]
+D <-  0.00588088839695529*arrs.long[(t-1),"Mudug_Arrival"]*arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
 
-      #Woqooyi_Galbeed_Conflict*Woqooyi_Galbeed_rain +
-      WG_C <- conflicts.long[ (t),"Woqooyi_Galbeed_Conflict"]
-      WG_R <- rain.long[ (t),"Woqooyi_Galbeed_rain"]
-    
-      #0.00680481834069344*Bakool_Arrival*Woqooyi_Galbeed_Arrival + 
-      Bak_A_reg <- 0.00680481834069344
-      Bak_A <- arrs.long[ (t), "Bakool_Arrival"]
-      WG_A <- arrs.long[ (t),"Woqooyi_Galbeed_Arrival"]
-    
+CA<- median(rain.long[(t-4):(t-1),"Banaadir_rain"])
 
-      #3.08795663688879e-7*Banadir_Arrival*Woqooyi_Galbeed_Arrival^2 - 
-      WG_A_reg <- 3.08795663688879e-7
-      Ban_A <- arrs.long[ (t), "Banadir_Arrival"]
-      WG_A <- arrs.long[ (t),"Woqooyi_Galbeed_Arrival"]  
-      #2.0551200483303*Awdal_Departures -
-      A_D_reg <- -2.0551200483303
-      A_D <- deps.long[ (t),"Awdal_Departures"] 
-      #1.25835377627807e-7*Banadir_Arrival*Sool_Arrival*Woqooyi_Galbeed_Arrival
-      B_A_reg <- -1.25835377627807e-7
-      S_A <- arrs.long[ (t), "Sool_Arrival"]
+CB<- mean(movavg(arrs.long[(t-4):(t-1),"Sool_Arrival"],3,"m"))
 
+if(is.na(CA) || CA > 0 ){
 
-      PA[t] <- 0
-      
-      
-      PA[t] <- sum(A_A, Ban_A_reg*Ban_A, WG_C*WG_R, Bak_A_reg*Bak_A*WG_A, 
-        WG_A_reg*Ban_A*WG_A*WG_A, A_D_reg*A_D, B_A_reg*Ban_A*S_A*WG_A, na.rm = TRUE)
-      #Bay_Incidents
-      PI[t] <- 0
-      #Bay_Departures
-      PD[t] <- 0
-      
-    
-  }
-  
-  
-  return(PA)
+ C <- CB
+
 }
+else{ 
+  C <- -5714
+} 
+ 
 
-bay_arrivals <- function(start, end){
-  #this section to make the predictions per Region
-  PI <- PA <- PD <- rep(NA, len)
-  
-  for (t in start:end){
-    
-    #BAY PREDICTION FOR JULY
-      #output$r0 <- "Jubbadaa_Hoose"
-      #Bay_Arrival = 13.436169844673*Jubbada_Hoose_Conflict + 1.16638118095275*Awdal_Departures + 
-      #0.861554563637453*Togdheer_Arrival + 
-      #6.77121426152958e-7*Awdal_Arrival*Bari_Arrival*delay(Banadir_Departures, 4) - 
-      #Gedo_rain - 1.80033045410828e-7*Bari_Arrival*Jubbada_Dhexe_Arrival*delay(Banadir_Departures, 4)
-      
-      PA[t] <- 0
-      
-      # detecting the vars in the dataset.
-      JH_C <- conflicts.long[ (t),"Jubbada_Hoose_Conflict"]
-      A_D <- deps.long[ (t),"Awdal_Departures"]
-      T_A <- arrs.long[ (t),"Togdheer_Arrival"]
-      A_A <- arrs.long[ (t),"Awdal_Arrival"]
-      B_A <- arrs.long[ (t),"Bari_Arrival"]
-      B_D <- deps.long[ (t-4), "Banadir_Departures"]
-      G_R <- rain.long[ (t),"Gedo_rain"]
-      JD_A <- arrs.long[ (t),"Jubbada_Dhexe_Arrival"]
-      #reg
-      JH_C_reg <- 13.436169844673
-      A_D_reg <- 1.16638118095275
-      T_A_reg <- 0.861554563637453
-      exp_reg <- 6.77121426152958e-7
-      B_A_reg <- 1.80033045410828e-7
-      
-      
-      PA[t] <- sum(JH_C_reg *JH_C,A_D_reg* A_D ,T_A_reg*T_A,
-                   exp_reg*A_A*B_A*B_D,-G_R,-B_A_reg*B_A*JD_A*B_D,na.rm = TRUE)
-      #Bay_Incidents
-      PI[t] <- 0
-      #Bay_Departures
-      PD[t] <- 0
-      
-    
-  }
-  
-  
-  return(PA)
-  
-}
+G <- 2.31702827594048*arrs.long[(t-1),"Sanaag_Arrival"]
+H <- 5.97879951112646*deps.long[(t-3),"Bari_Departures"]
 
-bay_bestwaterfit_arrivals <- function(region, futuremonths){
-  #this section to make the predictions per Region
-  for (t in futuremonths:1){
-    
-    #BAY PREDICTION FOR JULY
-    #output$r0 <- "Jubbadaa_Hoose"
-    #Bay_Arrival = 1.31268762505684*Sanaag_Departures + 1.31268762505684*delay(Bari_Departures, 11) + 
-    # 0.659938976916995*Togdheer_Arrival + 
-    #delay(Woqooyi_Galbeed_Conflict, 2)*smm(Woqooyi_Galbeed_Departures, 17) + 
-    #mma(Jubbada_Hoose_Conflict, 2)*mma(Bari_Conflict, 4) + 
-    #-15436.7884288987/sma(Togdheer_Departures, 9) + 
-    #1.74774106348673e-5*Banadir_Arrival*Bay_WaterDrumPrice + 
-    #mma(Jubbada_Hoose_Conflict, 2) - 0.420988035304692*Banadir_Arrival
-    
-    PA[t] <- 0
-    
-    # detecting the vars in the dataset.
-    S_D <- deps.long[ (total_len-t),"Sanaag_Departures"]
-    B_D <- deps.long[ (total_len-t-11), "Bari_Departures"]
-    T_A <- arrs.long[ (total_len-t),"Togdheer_Arrival"]
-    WG_C <- conflicts.long[ (total_len-t-2),"Woqooyi_Galbeed_Conflict"]
-    WG_D <- median(deps.long[(total_len-t-17):(total_len-t),"Woqooyi_Galbeed_Departures"])
-    # fix this to be moderate
-    JH_C <- mean(conflicts.long[(total_len-t-2):(total_len-t),"Jubbada_Hoose_Conflict"])
-    B_C <- mean(conflicts.long[(total_len-t-4):(total_len-t),"Bari_Conflict"])
-    T_D <- median(deps.long[ (total_len-t-9):(total_len-t), "Togdheer_Departures"])
-    B_A <- arrs.long[ (total_len-t),"Banadir_Arrival"]
-    #B_W <-water.long[total_len-t),"Bay_WaterDrumPrice"]
-    
-    #reg
-    S_D_reg <- 1.31268762505684
-    B_D_reg <- 1.31268762505684
-    T_A_reg <- 0.659938976916995
-    T_D_reg <- -15436.7884288987
-    B_A_B_W_reg <- 1.74774106348673e-5
-    B_A_reg <- - 0.42098803530469
-    
-    #PA[t] <- sum(S_D_reg*S_D, B_D_reg*B_D, T_A_reg*T_A, WG_C*WG_D, 
-    #JH_C*B_D,T_D_reg/T_D,B_A_B_W_reg*B_W,JH_C, B_A_reg*B_A, na.rm = TRUE)
-    
-    
-    PA[t] <- sum(S_D_reg*S_D, B_D_reg*B_D, T_A_reg*T_A, WG_C*WG_D, 
-                 JH_C*B_D,T_D_reg/T_D,JH_C, B_A_reg*B_A,na.rm = TRUE)
+I <- deps.long[(t-4),"Sanaag_Departures"] * rain.long[(t-5),"Hiiraan_rain"]
+E <- max(H, I, na.rm=TRUE)
 
+FIN <- max(386, max(A, max(sum(B ,D, C ,E, na.rm=TRUE), G),na.rm=TRUE),na.rm=TRUE)
+    
+    PA[t] <- FIN
+    
+    
     #Bay_Incidents
     PI[t] <- 0
     #Bay_Departures
     PD[t] <- 0
     
+  }
+  return(PA)
+}
+
+bay_12B_arrivals <- function(start,end){
+  
+  start = 15
+  
+  end=94
+  len=94
+  
+  PI <- PA <- PD <- rep(NA, len)
+  
+  for(t in start:end){
+    
+A <- deps.long[(t-13),"Galgaduud_Departures"]
+B <- 2.27391080050669*deps.long[(t-12),"Bari_Departures"]
+C <- 0.00588055939993242*arrs.long[(t-1),"Mudug_Arrival"]*arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
+D <- mean(rain.long[(t-4):(t-1),"Banaadir_rain"])
+E <- median(arrs.long[(t-4):(t-1),"Sool_Arrival"])
+G <- 5.95887287478984*deps.long[(t-3),"Bari_Departures"]
+H <- deps.long[(t-4),"Sanaag_Departures"]*rain.long[(t-5),"Hiiraan_rain"]
+K <- 2.29816996652923*arrs.long[(t-1),"Sanaag_Arrival"]
+
+
+X <- sum(311.894138182276,K,na.rm=TRUE)
+if(is.na(D) || D >0 )
+{
+  Q <- E
+}
+else{Q <- -5716}
+
+Y <- sum(B, C, Q, max(G, H, na.rm=TRUE),na.rm =TRUE)
+
+W <- max(Y, X,na.rm=TRUE)
+FIN <- max(A, W,na.rm=TRUE)
+
+    PA[t] <- FIN
+    
+    
+    #Bay_Incidents
+    PI[t] <- 0
+    #Bay_Departures
+    PD[t] <- 0
     
   }
-  
-  PA <- rev(PA)
   return(PA)
+}
+
+
+bay_12C_arrivals <- function(start,end){
   
+  start = 15
+  
+  end=93
+  len=93
+  
+  PI <- PA <- PD <- rep(NA, len)
+  
+  for(t in start:end){
+    
+A <- 7.09622785331628*deps.long[(t-3),"Bari_Departures"]
+B <- 2.43787508914871*deps.long[(t-12),"Bari_Departures"]
+C <- 0.00601323333840485*arrs.long[(t-1),"Mudug_Arrival"]*arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
+D <- deps.long[(t-4),"Sanaag_Departures"]*rain.long[(t-5),"Hiiraan_rain"]
+E <- deps.long[(t-13),"Galgaduud_Departures"]
+G <- median(rain.long[(t-4):(t-1),"Banaadir_rain"])
+H <- 5.95351409100946*deps.long[(t-4),"Bari_Departures"]
+X <- 2.46409172818795*arrs.long[(t-1),"Sanaag_Arrival"]
+if (is.na(G) || G>0)
+{Y<- H}
+else
+{ Y <- -3205.61372701243}
+
+FIN <- max(A, 0.93871317992841*max(sum(B , C , D , E , Y , na.rm=TRUE), X, na.rm=TRUE),na.rm=TRUE)
+
+    PA[t] <- FIN
+    
+    
+    #Bay_Incidents
+    PI[t] <- 0
+    #Bay_Departures
+    PD[t] <- 0
+    
+  }
+  return(PA)
+}
+bay_12D_arrivals <- function(start,end){
+  
+  start = 15
+  
+  end=93
+  len=93
+  
+  PI <- PA <- PD <- rep(NA, len)
+  
+  for(t in start:end){
+    
+X <- mean(rain.long[(t-7):(t-1),"Banaadir_rain"])
+Y <- deps.long[(t-4),"Bari_Departures"]*median(rain.long[(t-6):(t-1),"Hiiraan_rain"])
+
+if(is.na(X) || X > 0){A<- Y}
+
+else{A<- -2915}
+
+B <- 2.98981569846976*deps.long[(t-12),"Bari_Departures"]
+C <- 1.90068199745955*deps.long[(t-14),"Bari_Departures"]
+D <- 0.005464125090538*arrs.long[(t-1),"Mudug_Arrival"]*arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
+E <- 7.08510220750896*deps.long[(t-3),"Bari_Departures"]
+Z <- deps.long[(t-13),"Galgaduud_Departures"]
+T <- 2.31719227653268*arrs.long[(t-1),"Sanaag_Arrival"]
+FIN <- max(sum(A,max(sum(B,C,D,na.rm=TRUE), sum(E,Z,na.rm=TRUE),na.rm=TRUE),na.rm=TRUE), T,na.rm=TRUE)
+
+    PA[t] <- FIN
+    
+    
+    #Bay_Incidents
+    PI[t] <- 0
+    #Bay_Departures
+    PD[t] <- 0
+    
+  }
+  return(PA)
+}
+bay_12E_arrivals <- function(start,end){
+  
+  start = 15
+  
+  end=93
+  len=93
+  
+  PI <- PA <- PD <- rep(NA, len)
+  
+  for(t in start:end){
+X <- mean(rain.long[(t-7):(t-1),"Banaadir_rain"])
+Y <- deps.long[(t-4),"Bari_Departures"]*median(rain.long[(t-6):(t-1),"Hiiraan_rain"])
+if(is.na(X) || X>0){A<- Y}
+else{A<- -2908}
+B <- 3*deps.long[(t-12),"Bari_Departures"]
+C <- 0.005464125090538*arrs.long[(t-1),"Mudug_Arrival"]*arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
+D <- deps.long[(t-14),"Bari_Departures"]
+E <- 7.08538265288562*deps.long[(t-3),"Bari_Departures"]
+G <- deps.long[(t-13),"Galgaduud_Departures"]
+H <- 2.31173952956057*arrs.long[(t-1),"Sanaag_Arrival"]
+
+FIN <- max(sum(A,max(sum(B, C, D, na.rm=TRUE), sum(E, G,na.rm=TRUE)),na.rm=TRUE), H, na.rm=TRUE)
+
+    PA[t] <- FIN
+    
+    
+    #Bay_Incidents
+    PI[t] <- 0
+    #Bay_Departures
+    PD[t] <- 0
+    
+  }
+  return(PA)
+}
+bay_12F_arrivals <- function(start,end){
+  
+  start = 15
+  
+  end=93
+  len=93
+  
+  PI <- PA <- PD <- rep(NA, len)
+  
+  for(t in start:end){
+X <- mean(rain.long[(t-7):(t-1),"Banaadir_rain"])
+Y <- 6.01020527817426*deps.long[(t-4),"Bari_Departures"]
+if(is.na(X)|| X >0 ){A <- Y}
+else {A<- -2883}
+B <- 3*deps.long[(t-12),"Bari_Departures"]
+C <- 0.005464125090538*arrs.long[(t-1),"Mudug_Arrival"]*arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
+D <- 1.79377455952668*deps.long[(t-14),"Bari_Departures"]
+E <- 7.08538265288562*deps.long[(t-3),"Bari_Departures"]
+G <- deps.long[(t-13),"Galgaduud_Departures"]
+H <- 2.31173952956057*arrs.long[(t-1),"Sanaag_Arrival"]
+
+FIN <-  max(sum(A, max(sum(B, D, C, na.rm=TRUE), sum(E, G,na.rm=TRUE), na.rm=TRUE),na.rm=TRUE), H,na.rm=TRUE)
+
+
+    PA[t] <- FIN
+    
+    
+    #Bay_Incidents
+    PI[t] <- 0
+    #Bay_Departures
+    PD[t] <- 0
+    
+  }
+  return(PA)
+}
+
+bay_12NEWA_arrivals <- function(start,end){
+  
+  start = 15
+  
+  end=94
+  len=94
+  
+  PI <- PA <- PD <- rep(NA, len)
+  
+  for(t in start:end){
+A <- arrs.long[(t-1),"Bari_Arrival"]
+B <- median(rain.long[(t-4):(t-1),"Banaadir_rain"],na.rm = TRUE)
+C <- mean(arrs.long[(t-3):(t-1),"Sool_Arrival"],na.rm = TRUE)
+
+if(is.na(B) || B>0){
+  D <- C
+}
+else{
+  D <- -5711.49956439839
+}
+
+E <- 0.00577144170042261*arrs.long[(t-1),"Mudug_Arrival"]*arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
+G <- 1.73906550532281*deps.long[(t-13),"Galgaduud_Departures"]
+KA <- median(rain.long[(t-4):(t-1),"Banaadir_rain"],na.rm=TRUE)
+KB <- 5.91536930063778*deps.long[(t-3),"Bari_Departures"]
+KC <- deps.long[(t-4),"Sanaag_Departures"]*rain.long[(t-5),"Hiiraan_rain"]
+
+if (is.na(KA) || KA >0){
+  K<-KB
+}
+else{
+  K<-KC
+}
+
+LA <- median(rain.long[(t-14):(t-1),"Sool_rain"],na.rm=TRUE)
+LB <- 2.31175490528636*arrs.long[(t-1),"Sanaag_Arrival"]
+LC <- rivers.long[(t-5),"Juba_River_discharge"]
+
+
+if(is.na(LA) || LA>0 ){
+  L<- LB
+}
+else{
+  L<- LC
+}
+
+FIN <- max(sum(A, D, max(E, G, na.rm=TRUE), K, na.rm=TRUE), L, na.rm=TRUE)
+
+    PA[t] <- FIN
+    
+    
+    #Bay_Incidents
+    PI[t] <- 0
+    #Bay_Departures
+    PD[t] <- 0
+    
+  }
+  return(PA)
+}
+
+bay_12NEWB_arrivals <- function(start,end){
+  
+  start = 15
+  
+  end=93
+  len=93
+  
+  PI <- PA <- PD <- rep(NA, len)
+  
+  for(t in start:end){
+A <- arrs.long[(t-1),"Bari_Arrival"]
+BA <- median(rain.long[(t-4):(t-1),"Banaadir_rain"])
+BB <- mean(arrs.long[(t-3):(t-1),"Sool_Arrival"])
+if (is.na(BA) || BA>0){
+  B<- BB
+}
+else{
+  B<- -5710.82225073712
+}
+
+C <- 0.00577144170042261*arrs.long[(t-1),"Mudug_Arrival"]*arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
+D <- deps.long[(t-13),"Galgaduud_Departures"]*mean(fatalities.long[(t-5):(t-1),"Woqooyi.Galbeed_Fatalities"])
+
+GA <- fatalities.long[(t-1),"Jubbada.Dhexe_Fatalities"]
+GB <- 5.91366075067026*deps.long[(t-3),"Bari_Departures"]
+GC <- deps.long[(t-4),"Sanaag_Departures"]*rain.long[(t-5),"Hiiraan_rain"]
+
+if (is.na(GA) || GA>0){
+  G<- GB
+}
+else{
+  G<- -5710.82225073712
+}
+SA <- median(rain.long[(t-14):(t-1),"Sool_rain"])
+SB <- 2.31175490528636*arrs.long[(t-1),"Sanaag_Arrival"]
+if (is.na(SA) || SA>0){
+  S<- SB
+}
+else{
+  S<- 442.911557453352
+}
+
+FIN <- max(sum(A, B, max(C, D,na.rm=TRUE), G, na.rm=TRUE), S, na.rm=TRUE)
+
+    PA[t] <- FIN
+    
+    
+    #Bay_Incidents
+    PI[t] <- 0
+    #Bay_Departures
+    PD[t] <- 0
+    
+  }
+  return(PA)
+}
+
+bay_12NEWC_arrivals <- function(start,end){
+  
+  start = 15
+  
+  end=93
+  len=93
+  
+  PI <- PA <- PD <- rep(NA, len)
+  
+  for(t in start:end){
+A <- arrs.long[(t-1),"Bari_Arrival"]
+BA <- median(rain.long[(t-4):(t-1),"Banaadir_rain"])
+BB <- mean(arrs.long[(t-3):(t-1),"Sool_Arrival"])
+if (is.na(BA)|| BA>0){
+  B <- BB
+}
+else{
+  B <- -5861.79559834364 
+}
+
+C <- 0.00578426367028078*arrs.long[(t-1),"Mudug_Arrival"]*arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
+D <- 1.75944428063076*deps.long[(t-13),"Galgaduud_Departures"]
+
+EA <- median(rain.long[(t-4):(t-1),"Banaadir_rain"])
+EB <- 5.91200111736018*deps.long[(t-3),"Bari_Departures"]
+EC <- deps.long[(t-4),"Sanaag_Departures"]*rain.long[(t-5),"Hiiraan_rain"]
+
+if (is.na(EA) || EA>0){
+  E <- EB
+}
+else{
+  E <- EC
+}
+
+G <- 2.31223534024849*arrs.long[(t-1),"Sanaag_Arrival"]
+
+FIN <- max(426.077738789064, max(sum(A, B, max(C, D,na.rm=TRUE), E,na.rm=TRUE), G), na.rm=TRUE)
+    
+    PA[t] <- FIN
+    
+    
+    #Bay_Incidents
+    PI[t] <- 0
+    #Bay_Departures
+    PD[t] <- 0
+    
+  }
+  return(PA)
+}
+
+
+################################################################################################
+#
+bay_TEST1A_arrivals <- function(start,end){
+  
+  start = 15
+  
+  end=93
+  len=93
+  
+  PI <- PA <- PD <- rep(NA, len)
+  
+  for(t in start:end){
+A <- 0.797107265273338*arrs.long[(t-1),"Sool_Arrival"]
+B <- 0.612331581418625*arrs.long[(t-13),"Mudug_Arrival"]
+C <- arrs.long[(t-1),"Sool_Arrival"]*tan(arrs.long[(t-1),"Awdal_Arrival"])
+D <- 0.0278892569471559*deps.long[(t-1),"Sanaag_Departures"]*arrs.long[(t-1),"Awdal_Arrival"]
+E <- 0.00505997610411542*arrs.long[(t-1),"Mudug_Arrival"]*arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
+G <- deps.long[(t-14),"Sool_Departures"]
+H <- -1*arrs.long[(t-1),"Awdal_Arrival"]
+J <- -1*arrs.long[(t-4),"Jubbada_Dhexe_Arrival"]
+K <- tan(0.993604035057624*mean(fatalities.long[(t-17):(t-16),"Nugaal_Fatalities"]))
+L <- sum (A,B,C,D,E,G,H,J,na.rm=TRUE)
+
+FIN <- max(L, K,na.rm=TRUE)
+    PA[t] <- FIN
+    
+    
+    #Bay_Incidents
+    PI[t] <- 0
+    #Bay_Departures
+    PD[t] <- 0
+    
+  }
+  return(PA)
+}
+
+bay_12DATESA_arrivals <- function(start,end){
+  
+  start = 16
+  
+  end=94
+  len=94
+  
+  PI <- PA <- PD <- rep(NA, len)
+  
+  for(t in start:end){
+A <- deps.long[(t-1),"Jubbada_Dhexe_Departures"]
+B <- mean(conflicts.long[(t-16):(t-1),"Galgaduud_Conflict"])
+
+#Returns 1 if x <= y, 0 otherwise
+CA <- mean(fatalities.long[(t-4):(t-1),"Bay_Fatalities"])
+CB <- mean(conflicts.long[(t-4):(t-1),"Togdheer_Conflict"])
+if (CA<=CB){C<-1}
+else{C<-0}
+
+D <- mean(arrs.long[(t-3):(t-1),"Bari_Arrival"])
+
+E <- max(conflicts.long[(t-1),"Bay_Conflict"]^2, fatalities.long[(t-1),"Sool_Fatalities"]*deps.long[(t-1),"Togdheer_Departures"],na.rm=TRUE)
+GAA <- conflicts.long[(t-1),"Bay_Conflict"]
+GAB <- 2.01083064621521*arrs.long[(t-1),"Sanaag_Arrival"] 
+
+if(is.na(GAA) || GAA > 0){
+  GA <- GAB
+}
+else{
+  GA <- 1595.33850434883
+}
+
+GB <- fatalities.long[(t-1),"Sool_Fatalities"]
+GC <- deps.long[(t-1),"Togdheer_Departures"]
+if (is.na(GB) || GB >0 ){
+  G <- GA
+}
+else{
+  G <- GC
+}
+KA <- logistic(fatalities.long[(t-1),"Mudug_Fatalities"]) 
+KB <- median(arrs.long[(t-5):(t-1),"Mudug_Arrival"])
+KC <- median(fatalities.long[(t-6):(t-1),"Togdheer_Fatalities"])
+K <- (KA*KB*KC)
+L <- tanh(median(KC))
+ABC <- A*B*C
+tot <- sum(ABC,D,E,G,na.rm=TRUE)
+FIN <-  max(tot, K^L,na.rm=TRUE)
+    PA[t] <- FIN
+    
+    
+    #Bay_Incidents
+    PI[t] <- 0
+    #Bay_Departures
+    PD[t] <- 0
+    
+  }
+  return(PA)
+}
+
+
+bay_12DATESB_arrivals <- function(start,end){
+  
+  start = 16
+  
+  end=94
+  len=94
+  
+  PI <- PA <- PD <- rep(NA, len)
+  
+  for(t in start:end){
+    
+A <- arrs.long[(t-1),"Nugaal_Arrival"]
+B <- 361
+C <- conflicts.long[(t-1),"Bay_Conflict"]^2
+D <- 0.00594668706750925*arrs.long[(t-1),"Mudug_Arrival"]*arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
+E <- fatalities.long[(t-1),"Sool_Fatalities"]
+G <- 3.20250999835703*mean(conflicts.long[(t-8):(t-1),"Gedo_Conflict"])*mean(deps.long[(t-8):(t-1),"Togdheer_Departures"])
+H <- arrs.long[(t-1),"Nugaal_Arrival"]
+if (is.na(E) || E>0){
+  I<- G
+}
+else{
+  I<- H
+}
+J <- -1*fatalities.long[(t-9),"Jubbada_Hoose_Fatalities"]*mean(deps.long[(t-9):(t-1),"Jubbada_Dhexe_Departures"])
+K <- 2.31215780686505*arrs.long[(t-1),"Sanaag_Arrival"]
+L <- water.long[(t-1),"Sool_WaterDrumPrice"]
+M <- -146858.497640287
+N <- sum(D, I , J, na.rm=TRUE)
+P <- sum (L, M, na.rm=TRUE)
+FIN <- max(max(A, max(B, max(max(C, N,na.rm=TRUE), K,na.rm=TRUE), na.rm=TRUE),na.rm=TRUE), P,na.rm=TRUE)
+    PA[t] <- FIN
+    
+    
+    #Bay_Incidents
+    PI[t] <- 0
+    #Bay_Departures
+    PD[t] <- 0
+    
+  }
+  return(PA)
+}
+bay_BLUEA_arrivals <- function(start,end){
+  
+  start = 16
+  
+  end=94
+  len=94
+  
+  PI <- PA <- PD <- rep(NA, len)
+  
+  for(t in start:end){
+
+A <- stations.long[(t-2),"Hiiraan_Belet_WeyneStation_Shabelle_River"]
+B <- -1*asinh(median(stations.long[(t-5):(t-2),"Hiiraan_Belet_WeyneStation_Shabelle_River"],na.rm=TRUE))
+CA <- 1.79605197655313
+C <- 1392.18823411085*median(rain.long[(t-5):(t-2),"Bari_rain"],na.rm=TRUE) %% rain.long[(t-6),"Bakool_rain"]
+D <- -1*stations.long[(t-2),"Hiiraan_Belet_WeyneStation_Shabelle_River"]
+AA <- deps.long[(t-13),"Galgaduud_Departures"]
+AB <- 2.26751515362942*deps.long[(t-12),"Bari_Departures"]
+AC <- 0.00588088839695529*arrs.long[(t-1),"Mudug_Arrival"]*arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
+BA <- median(rain.long[(t-4):(t-1),"Banaadir_rain"],na.rm=TRUE)
+BB <- mean(arrs.long[(t-4):(t-1),"Sool_Arrival"],na.rm=TRUE)
+CA <- 5.97879951112646*deps.long[(t-3),"Bari_Departures"]
+CB <- deps.long[(t-4),"Sanaag_Departures"]*rain.long[(t-5),"Hiiraan_rain"]
+DA <- 2.31702827594048*arrs.long[(t-1),"Sanaag_Arrival"]
+E <- stations.long[(t-2),"Hiiraan_Belet_WeyneStation_Shabelle_River"]
+EA <- factorial(E)
+EB <- cosh(EA)
+FA <- deps.long[(t-13),"Galgaduud_Departures"]
+FB <- 2.26751515362942*deps.long[(t-12),"Bari_Departures"]
+FC <- 0.00588088839695529*arrs.long[(t-1),"Mudug_Arrival"]*arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
+FD <- median(rain.long[(t-4):(t-1),"Banaadir_rain"],na.rm=TRUE)
+FE <- mean(arrs.long[(t-4):(t-1),"Sool_Arrival"],na.rm=TRUE)
+GA <- 5.97879951112646*deps.long[(t-3),"Bari_Departures"]
+GB <- deps.long[(t-4),"Sanaag_Departures"]*rain.long[(t-5),"Hiiraan_rain"]
+GC <- 2.31702827594048*arrs.long[(t-1),"Sanaag_Arrival"]
+
+if(is.na(FD) || FD >0 ){ FIF <- FE}
+else{FIF <- -5714}
+GMAX <- max(GA, GB, na.rm=TRUE)
+GMAXMAX <- max(sum(FB, FC, FIF, GMAX, na.rm=TRUE), GC, na.rm=TRUE)
+FAGMAX <- max(FA, GMAXMAX,na.rm=TRUE)
+CMAX <- max(CA, CB, na.rm=TRUE)
+if(is.na(BA) || BA>0){BIF <- BB}
+else{BIF <- -5714}
+DSUM <- sum(AB, AC, BIF, CMAX, na.rm=TRUE)
+DMAX <- max(DSUM, DA,na.rm=TRUE)
+CSUM <- sum(CA, C, D,na.rm=TRUE)
+AMAX <- max(AA, DMAX, na.rm=TRUE)
+MAXAMAX <- max(386, AMAX,na.rm=TRUE)
+if (is.na(CSUM) || CSUM>0){CSUMIF <- MAXAMAX}
+else{CSUMIF <- 613.300238738678}
+ABSUM <- sum(A, B, na.rm=TRUE)
+EMAXFAG <- EB*max(386, FAGMAX, na.rm=TRUE)
+if (is.na(ABSUM) || ABSUM>0){MAINIF <- CSUMIF}
+else{MAINIF <- EMAXFAG}
+FIN <- sum (MAINIF, -72.320225746779,na.rm=TRUE)
+
+    PA[t] <- FIN
+    
+    
+    #Bay_Incidents
+    PI[t] <- 0
+    #Bay_Departures
+    PD[t] <- 0
+    
+  }
+  return(PA)
 }
 # Define a server for the Shiny app
 # the ids refer to the google sheet refering to the special identifier
@@ -1093,7 +1539,7 @@ shinyServer(function(input, output, session) {
 
     region <- input$region
     fmonths_start <- which(conflicts.long$Date == monthStart(as.Date("2011-07-01")))
-    fmonths_end <- which(conflicts.long$Date == monthStart(as.Date("2017-08-01")))
+    fmonths_end <- which(conflicts.long$Date == monthStart(as.Date("2017-10-01")))
     # prepare columns for the merged graph
     
     
@@ -1114,7 +1560,7 @@ shinyServer(function(input, output, session) {
     PI <- PA <- PD <- rep(NA, len)
     
     if(region == "Bay"){
-          PA <- bay_11C_arrivals(fmonths_start, fmonths_end)
+          PA <- bay_BLUEA_arrivals(fmonths_start, fmonths_end)
           PI <- PA[fmonths_start:fmonths_end]
     }
     else{
@@ -1146,7 +1592,7 @@ shinyServer(function(input, output, session) {
   output$datatable <- renderTable({
     Tdata <- cbind(pred_data()[["wide"]])
     Tdata <- cbind(Tdata)
-    Tdata[seq((nrow(Tdata)-3), nrow(Tdata), length.out=4),]
+    Tdata[seq((nrow(Tdata)-12), nrow(Tdata), length.out=13),]
   })
   
   

@@ -1,4 +1,23 @@
+Bay_Arrival = 
+A <- rain.long[t,"Shabeellaha_Dhexe_rain"] 
+B <- arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"] 
+C <- mean(arrs.long[(t-6):t,"Togdheer_Arrival"])
 
+      E <- 2.84291053988138*arrs.long[t,"Bakool_Arrival"]
+      Fa <- 1.90605269499887*arrs.long[t,"Bari_Arrival"]
+      G <- 0.582938861571093*deps.long[t,"Bay_Departures"]
+      H <- arrs.long[(t-1),"Woqooyi_Galbeed_Arrival"]
+      I <- -1*rain.long[t,"Shabeellaha_Dhexe_rain"]*sma(Jubbada_Hoose_Departures, 2)
+      J <- -0.0801078676959042*water.long[t,"Hiiraan_WaterDrumPrice"]
+      K <- -6.62472178142272*deps.long[t,"Awdal_Departures"]
+      L <- 0.263886473589876*deps.long[t,"Bay_Departures"]
+      
+      
+      
+      D <- max(sum(E,Fa,G ,H,I,J,K, na.rm=TRUE), L)
+      
+      fin <- sum(A,B,C,D, na.rm=TRUE)
+      ########################################################################
 A <- fatalities.long[t,"Banaadir_Fatalities"]
 B <- median(deps.long[(t-9):t,"Bay_Departures"])
 C <- arrs.long[t,"Sool_Arrival"]
